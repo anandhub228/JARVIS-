@@ -288,6 +288,7 @@ fun JarvisScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .imePadding()
             .background(background)
             .padding(16.dp)
     ) {
