@@ -122,7 +122,6 @@ fun JarvisScreen(
     LaunchedEffect(spokenText) {
         if (spokenText.isNotBlank()) {
             message = spokenText
-            onSpokenTextUsed()
         }
     }
 
