@@ -120,9 +120,11 @@ fun JarvisScreen(
     }
 
     LaunchedEffect(spokenText) {
-        if (spokenText.isNotBlank()) {
-            message = spokenText
-        }
+    if (spokenText.isNotBlank()) {
+        messages = messages + "YOU: $spokenText"
+        message = ""
+        onSpokenTextUsed()
+    }
     }
 
     Column(
