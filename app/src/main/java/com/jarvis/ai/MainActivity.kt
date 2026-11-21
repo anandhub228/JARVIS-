@@ -7,8 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,57 +31,88 @@ fun JarvisScreen() {
     val background = Color(0xFF07111F)
     val cyan = Color(0xFF00E5FF)
 
+    var message by remember { mutableStateOf("") }
+    var messages by remember {
+        mutableStateOf(listOf("JARVIS: Hello! How can I assist you?"))
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(background)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(16.dp)
     ) {
         Text(
             text = "J.A.R.V.I.S.",
             color = cyan,
-            fontSize = 32.sp
+            fontSize = 28.sp
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
         Text(
-            text = "JUST A RATHER VERY INTELLIGENT SYSTEM",
+            text = "PERSONAL AI ASSISTANT",
             color = Color.LightGray,
             fontSize = 11.sp
         )
 
-        Spacer(modifier = Modifier.height(70.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        Box(
+        Column(
             modifier = Modifier
-                .size(180.dp)
-                .background(Color(0xFF102B40), CircleShape),
-            contentAlignment = Alignment.Center
+                .weight(1f)
+                .fillMaxWidth()
+                .background(
+                    Color(0xFF102033),
+                    RoundedCornerShape(16.dp)
+                )
+                .padding(12.dp)
         ) {
-            Text(
-                text = "J",
-                color = cyan,
-                fontSize = 80.sp
-            )
+            messages.forEach { item ->
+                Text(
+                    text = item,
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
         }
-
-        Spacer(modifier = Modifier.height(35.dp))
-
-        Text(
-            text = "SYSTEM ONLINE",
-            color = cyan,
-            fontSize = 16.sp
-        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
-            text = "Good evening. How can I help you?",
-            color = Color.White,
-            fontSize = 16.sp
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = message,
+                onValueChange = { message = it },
+                modifier = Modifier.weight(1f),
+                placeholder = {
+                    Text("Ask JARVIS...")
+                },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedBorderColor = cyan,
+                    unfocusedBorderColor = Color.Gray
+                )
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Button(
+                onClick = {
+                    if (message.isNotBlank()) {
+                        messages = messages + "YOU: $message"
+                        message = ""
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = cyan
+                ),
+                shape = CircleShape
+            ) {
+                Text("Send", color = Color.Black)
+            }
+        }
     }
 }
