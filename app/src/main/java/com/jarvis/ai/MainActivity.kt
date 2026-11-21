@@ -21,6 +21,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -103,6 +109,62 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+suspend fun askJarvisAI(userMessage: String): String {
+    return withContext(Dispatchers.IO) {
+        val url = URL("https://jarvis-ai.anandhub228.workers.dev/")
+        val connection = url.openConnection() as HttpURLConnection
+
+        try {
+            connection.requestMethod = "POST"
+            connection.connectTimeout = 15000
+            connection.readTimeout = 60000
+            connection.doOutput = true
+            connection.setRequestProperty(
+                "Content-Type",
+                "application/json"
+            )
+
+            val json = JSONObject()
+            json.put("message", userMessage)
+
+            connection.outputStream.use {
+                it.write(
+                    json.toString().toByteArray(Charsets.UTF_8)
+                )
+            }
+
+            val responseCode = connection.responseCode
+            val responseStream =
+                if (responseCode in 200..299) {
+                    connection.inputStream
+                } else {
+                    connection.errorStream
+                        ?: throw Exception("Server error: $responseCode")
+                }
+
+            val response = responseStream.bufferedReader().use {
+                it.readText()
+            }
+
+            val result = JSONObject(response)
+
+            if (responseCode in 200..299) {
+                result.optString(
+                    "reply",
+                    "JARVIS received an empty response."
+                )
+            } else {
+                result.optString(
+                    "error",
+                    "Server error: $responseCode"
+                )
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+}
+
 @Composable
 fun JarvisScreen(
     onMicClick: () -> Unit,
@@ -111,20 +173,44 @@ fun JarvisScreen(
 ) {
     val background = Color(0xFF07111F)
     val cyan = Color(0xFF00E5FF)
+    val scope = rememberCoroutineScope()
 
     var message by remember { mutableStateOf("") }
+
     var messages by remember {
         mutableStateOf(
             listOf("JARVIS: Hello! How can I assist you?")
         )
     }
 
-    LaunchedEffect(spokenText) {
-    if (spokenText.isNotBlank()) {
-        messages = messages + "YOU: $spokenText"
-        message = ""
-        onSpokenTextUsed()
+    var isLoading by remember {
+        mutableStateOf(false)
     }
+
+    LaunchedEffect(spokenText) {
+        if (spokenText.isNotBlank()) {
+            val userMessage = spokenText.trim()
+
+            messages = messages + "YOU: $userMessage"
+            message = ""
+            onSpokenTextUsed()
+
+            if (!isLoading) {
+                isLoading = true
+
+                scope.launch {
+                    try {
+                        val reply = askJarvisAI(userMessage)
+                        messages = messages + "JARVIS: $reply"
+                    } catch (e: Exception) {
+                        messages = messages +
+                            "JARVIS: Connection error. Please try again."
+                    } finally {
+                        isLoading = false
+                    }
+                }
+            }
+        }
     }
 
     Column(
@@ -165,6 +251,14 @@ fun JarvisScreen(
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
             }
+
+            if (isLoading) {
+                Text(
+                    text = "JARVIS is thinking...",
+                    color = cyan,
+                    fontSize = 14.sp
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -190,11 +284,27 @@ fun JarvisScreen(
 
             Button(
                 onClick = {
-                    if (message.isNotBlank()) {
-                        messages = messages + "YOU: $message"
+                    if (message.isNotBlank() && !isLoading) {
+                        val userMessage = message.trim()
+
+                        messages = messages + "YOU: $userMessage"
                         message = ""
+                        isLoading = true
+
+                        scope.launch {
+                            try {
+                                val reply = askJarvisAI(userMessage)
+                                messages = messages + "JARVIS: $reply"
+                            } catch (e: Exception) {
+                                messages = messages +
+                                    "JARVIS: Connection error. Please try again."
+                            } finally {
+                                isLoading = false
+                            }
+                        }
                     }
                 },
+                enabled = !isLoading,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = cyan
                 ),
